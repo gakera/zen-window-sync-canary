@@ -168,9 +168,33 @@ def main():
                 if state["counter"] != 1 or not state["trustedClick"] or state["visibility"] != "visible":
                     raise RuntimeError("P0 real-click/visibility evidence unavailable")
                 report["first_click"] = state
-                second = command("/window/new", {"type": "window"})["handle"]
+                (evidence / "before-new-window.png").write_bytes(base64.b64decode(command("/screenshot")))
+                stage("new_window_shortcut")
+                previous_handles = set(command("/window/handles"))
+                command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [
+                    {"type": "keyDown", "value": "\ue009"},
+                    {"type": "keyDown", "value": "n"},
+                    {"type": "keyUp", "value": "n"},
+                    {"type": "keyUp", "value": "\ue009"},
+                ]}]})
+                deadline = time.monotonic() + 15
+                second = None
+                while time.monotonic() < deadline:
+                    new_handles = set(command("/window/handles")) - previous_handles
+                    if len(new_handles) == 1:
+                        second = new_handles.pop()
+                        break
+                    if len(new_handles) > 1:
+                        raise RuntimeError("New Window shortcut created ambiguous window handles")
+                    time.sleep(0.2)
+                if second is None:
+                    raise TimeoutError("Ctrl+N did not expose a new window handle")
+                print("New Window shortcut exposed a second handle", flush=True)
+                report["window_creation"] = "Ctrl+N keyboard action"
+                stage("switch_second_window")
                 command("/window", {"handle": second})
                 command("/url", {"url": f"http://127.0.0.1:{server.server_port}/?second"})
+                (evidence / "second-window.png").write_bytes(base64.b64decode(command("/screenshot")))
                 command("/window", {"handle": first})
                 report["returned_window"] = command("/window")
                 if report["returned_window"] != first or second == first:
