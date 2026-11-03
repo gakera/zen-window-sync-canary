@@ -20,11 +20,14 @@ import zipfile
 
 def request_json(url, payload=None, method=None):
     data = None if payload is None else json.dumps(payload).encode()
-    request = urllib.request.Request(url, data=data, method=method, headers={
+    headers = {
         "User-Agent": "zen-window-sync-canary",
         "Content-Type": "application/json",
         "Accept": "application/vnd.github+json" if "api.github.com/" in url else "application/json",
-    })
+    }
+    if urllib.parse.urlparse(url).hostname == "api.github.com" and os.getenv("GITHUB_TOKEN"):
+        headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
+    request = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(request, timeout=75) as response:
             return json.load(response)

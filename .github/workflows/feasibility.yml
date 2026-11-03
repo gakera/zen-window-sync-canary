@@ -25,6 +25,7 @@ jobs:
       - name: Probe released Windows binary
         env:
           ZEN_RELEASE: ${{ inputs.release }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: python probe.py
       - name: Preserve evidence
         if: always()
