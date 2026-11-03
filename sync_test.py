@@ -58,7 +58,9 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
         address = command("/element", {"using": "css selector", "value": "#urlbar-input"})
         address_id = address["element-6066-11e4-a52e-4f735466cecf"]
         command("/element/" + address_id + "/click", {})
-        command("/element/" + address_id + "/value", {"text": "\ue009a\ue000" + f"http://127.0.0.1:{port}/{path}" + "\ue007"})
+        command("/element/" + address_id + "/clear", {})
+        command("/element/" + address_id + "/value", {"text": f"http://127.0.0.1:{port}/{path}"})
+        command("/element/" + address_id + "/value", {"text": "\ue007"})
 
     def select_tab(window_handle, tab_id):
         context("chrome")
