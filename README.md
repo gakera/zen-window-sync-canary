@@ -2,16 +2,18 @@
 
 ## Verified release comparison
 
-Both runs below used the same test revision (23a63ca) and released Windows x64 binaries on GitHub-hosted Windows runners:
+Both runs below used the same hardened test revision (ecfa7ab) and released Windows x64 binaries on GitHub-hosted Windows runners:
 
 | Release | Focused live-state result | Evidence |
 | --- | --- | --- |
-| 1.21.8b | PASS: same document token, counter, history and settled scroll in B; trusted click in B; updated state back in A | [Run 41707427309](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707427309) |
-| 1.24b | FAIL: selecting the matching shared tab in B leaves visible empty about:blank content | [Run 41707421534](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707421534) |
+| 1.21.8b | PASS: same document token, counter, history and settled scroll in B; trusted click in B; updated state back in A | [Run 41707940717](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707940717) |
+| 1.24b | FAIL: selecting the matching shared tab in B leaves visible empty about:blank content | [Run 41707935387](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707935387) |
 
 This demonstrates a meaningful working/affected contrast for this scenario. It is not a blanket safety claim or proof of the exact first affected release. Native window creation has intermittently failed before the regression scenario; those runs stay UNVERIFIED, with bounded setup retries and separate attempt evidence added afterward.
 
-Status: **FAIL observed on 1.24b** in [41706707017](https://github.com/gakera/zen-window-sync-canary/actions/runs/41706707017). A real link click created a fixture tab in A; after state mutations and selection of a distractor in A, the same shared tab ID selected in B displayed a visible, empty about:blank document. The source and destination WebDriver content handles were bound to that same Zen shared ID, and the selected ID was rechecked after binding. Full desktop screenshots show the blank selected tab and the source distractor. Repetition and historical controls are pending; this observation does not establish overall harness reliability or a safe release.
+Both hardened confirmation runs created two windows on attempt one; retry recovery has therefore been validated by deterministic local tests, not yet observed in a live recovery. Twelve local checks pass, including retry limits, late-window detection, partial-window guards and refusing a third window. Before retry hardening, the same contrast was also observed using revision 23a63ca in [1.21.8b](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707427309) and [1.24b](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707421534).
+
+Initial reproduction: **FAIL on 1.24b** in [41706707017](https://github.com/gakera/zen-window-sync-canary/actions/runs/41706707017). A real link click created a fixture tab in A; after state mutations and selection of a distractor in A, the same shared tab ID selected in B displayed a visible, empty about:blank document. The source and destination WebDriver content handles were bound to that same Zen shared ID, and the selected ID was rechecked after binding. Full desktop screenshots show the blank selected tab and the source distractor. The hardened confirmation runs and working historical control are recorded above.
 
 The [first historical 1.21.8b control](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707012345) transferred the same live document, counter and history URL; its only mismatch was scroll (1086 sampled in A versus 1400 settled in B). This exposed source sampling during smooth scrolling, so the harness now requires a stable scroll position for 0.6 seconds before recording expected state. That initial control result must not be interpreted as a historical browser regression. The [1.24b repeat](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707007668) was UNVERIFIED during window creation. The harness now waits for Zen startup/workspace initialization before attempting the second window.
 
