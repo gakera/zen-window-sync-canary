@@ -25,8 +25,12 @@ def request_json(url, payload=None, method=None):
         "Content-Type": "application/json",
         "Accept": "application/vnd.github+json" if "api.github.com/" in url else "application/json",
     })
-    with urllib.request.urlopen(request, timeout=75) as response:
-        return json.load(response)
+    try:
+        with urllib.request.urlopen(request, timeout=75) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {error.code}: {detail}") from error
 
 
 def release_asset(release, name):
@@ -144,7 +148,7 @@ def main():
                 wait_ready(base_url + "/status", driver_process)
                 profile = root / "profile"
                 profile.mkdir()
-                session = request_json(base_url + "/session", {"capabilities": {"alwaysMatch": {"browserName": "firefox", "moz:firefoxOptions": {"binary": str(binary), "args": ["-no-remote", "-profile", str(profile)], "prefs": {"zen.window-sync.enabled": True, "zen.urlbar.replace-newtab": False, "browser.shell.checkDefaultBrowser": False}}}}})["value"]
+                session = request_json(base_url + "/session", {"capabilities": {"alwaysMatch": {"browserName": "firefox", "moz:firefoxOptions": {"binary": str(binary), "args": ["-no-remote", "-profile", str(profile)], "prefs": {"zen.welcome-screen.seen": True, "zen.window-sync.enabled": True, "zen.urlbar.replace-newtab": False, "browser.shell.checkDefaultBrowser": False}}}}})["value"]
                 session_url = base_url + "/session/" + session["sessionId"]
                 report["capabilities"] = session["capabilities"]
 
@@ -152,7 +156,11 @@ def main():
                     return request_json(session_url + path, payload, method)["value"]
 
                 stage("click_and_window_switch")
+                command("/window/rect", {"width": 1200, "height": 800})
                 command("/url", {"url": f"http://127.0.0.1:{server.server_port}/"})
+                viewport = command("/execute/sync", {"script": "return {width: innerWidth, height: innerHeight, visibility: document.visibilityState}", "args": []})
+                report["viewport"] = viewport
+                print("Fixture viewport: " + json.dumps(viewport), flush=True)
                 first = command("/window")
                 button = command("/element", {"using": "css selector", "value": "#increment"})
                 command("/element/" + button["element-6066-11e4-a52e-4f735466cecf"] + "/click", {})

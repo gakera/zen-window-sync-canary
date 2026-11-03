@@ -25,6 +25,8 @@ The workflow always exits nonzero and reports UNVERIFIED at this phase, even if 
 
 ## Next gates
 
+First Windows run [41702080529](https://github.com/gakera/zen-window-sync-canary/actions/runs/41702080529) successfully extracted verified Zen 1.24b and established a headed WebDriver session. The first click failed with `element not interactable`; screenshot capture reported a 0×0 content area. Result: UNVERIFIED, before any sync assertion. The next attempt sets the release's `zen.welcome-screen.seen` preference to bypass first-run onboarding (whose source hides browser content), sets the window dimensions, and logs viewport dimensions and full WebDriver errors. Onboarding is a suspected cause, pending confirmation by the rerun.
+
 1. Obtain approval to initialize Git, create gakera/zen-window-sync-canary with agreed visibility, commit/push this source, and dispatch one Windows run. No dependencies need installing on Mac.
 2. Inspect actual Windows results. If WebDriver fails, investigate supported Windows accessibility/UI automation and prove real control on the hosted desktop. Do not expand the suite while automation is unusable.
 3. After P0, implement the issue 14759 scenario: mutate counter, scroll, history and token in A; select another tab in A; select its synchronized counterpart in B through normal UI; verify visible live state and a fresh trusted click; return to A. Avoid the intentional preview when both windows select the same tab. The included fixture supplies state primitives but the synchronized-state regression is not implemented yet.
