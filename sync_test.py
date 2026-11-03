@@ -1,7 +1,5 @@
 import base64
 import json
-from pathlib import Path
-import subprocess
 import time
 
 
@@ -46,21 +44,6 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     def click(selector):
         element = command("/element", {"using": "css selector", "value": selector})
         command("/element/" + element["element-6066-11e4-a52e-4f735466cecf"] + "/click", {})
-
-    def open_native(path):
-        context("chrome")
-        command("/window", {"handle": source_window})
-        subprocess.run([
-            "powershell.exe", "-NoProfile", "-File", str(Path(__file__).parent / "open-window.ps1"),
-            "-BrowserProcessId", str(browser_pid), "-WindowHandle", str(source_hwnd),
-            "-NewTabOnly",
-        ], check=True, timeout=20)
-        address = command("/element", {"using": "css selector", "value": "#urlbar-input"})
-        address_id = address["element-6066-11e4-a52e-4f735466cecf"]
-        command("/element/" + address_id + "/click", {})
-        command("/element/" + address_id + "/clear", {})
-        command("/element/" + address_id + "/value", {"text": f"http://127.0.0.1:{port}/{path}"})
-        command("/element/" + address_id + "/value", {"text": "\ue007"})
 
     def select_tab(window_handle, tab_id):
         context("chrome")
@@ -115,11 +98,13 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     report["sync_preferences"] = prefs
     if not prefs["enabled"] or prefs["onlyPinned"]:
         raise RuntimeError("Required normal-tab synchronization preferences are not active")
-    open_native("sync-fixture")
+    context("content")
+    click("#open-shared")
+    context("chrome")
     command("/window", {"handle": source_window})
     fixture_url = f"http://127.0.0.1:{port}/sync-fixture"
     try:
-        tab = until(lambda: next((tab for tab in inventory() if tab["url"] == fixture_url and tab["selected"] and not tab["empty"] and tab["id"]), None), "Normal address-bar navigation did not produce a materialized fixture tab")
+        tab = until(lambda: next((tab for tab in inventory() if tab["url"] == fixture_url and tab["selected"] and not tab["empty"] and tab["id"]), None), "Real link click did not produce a selected materialized fixture tab")
     finally:
         report["source_tabs_after_navigation"] = inventory()
     shared_id = tab["id"]
@@ -138,7 +123,7 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     report["expected_state"] = expected
     desktop("desktop-sync-source-state.png")
     stage("sync_deselect_source")
-    open_native("distractor")
+    click("#open-distractor")
     context("chrome")
     command("/window", {"handle": source_window})
     distractor = until(lambda: next((tab for tab in inventory() if tab["selected"] and tab["url"].endswith("/distractor") and not tab["empty"]), None), "Source window did not select the distractor tab")
