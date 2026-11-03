@@ -1,8 +1,10 @@
 import unittest
 import io
+import itertools
 from unittest.mock import patch
 from probe import release_asset, request_json
 from sync_test import state_differences
+from window_setup import open_second_window
 
 
 class ReleaseSelectionTests(unittest.TestCase):
@@ -45,6 +47,45 @@ class LiveStateTests(unittest.TestCase):
         for change in [{"counter": 0}, {"scroll": 0}, {"url": "http://127.0.0.1:1234/sync-fixture"}, {"visibility": "hidden"}, {"width": 0}]:
             with self.subTest(change=change):
                 self.assertTrue(state_differences(self.state, dict(self.state, **change)))
+
+
+class WindowRetryTests(unittest.TestCase):
+    single = {"native": [10], "chrome": ["window-a"], "tabs": ["tab-a"]}
+    double = {"native": [10, 20], "chrome": ["window-a", "window-b"], "tabs": ["tab-a", "tab-b"]}
+
+    def exercise(self, states, send, record):
+        with patch("window_setup.time.monotonic", side_effect=itertools.count()), patch("window_setup.time.sleep"):
+            return open_second_window(unittest.mock.Mock(side_effect=states), send, record, attempts=2, timeout=2)
+
+    def test_retries_when_both_window_observers_confirm_no_creation(self):
+        send = unittest.mock.Mock()
+        self.exercise([self.single, self.single, self.single, self.single, self.double], send, unittest.mock.Mock())
+        self.assertEqual(send.call_count, 2)
+
+    def test_late_window_prevents_another_shortcut(self):
+        send = unittest.mock.Mock()
+        self.exercise([self.single, self.single, self.single, self.double], send, unittest.mock.Mock())
+        self.assertEqual(send.call_count, 1)
+
+    def test_partial_creation_prevents_duplicate_shortcut(self):
+        send = unittest.mock.Mock()
+        pending = dict(self.single, chrome=["window-a", "window-b"])
+        with self.assertRaisesRegex(RuntimeError, "Partially created"):
+            self.exercise([self.single, self.single, pending], send, unittest.mock.Mock())
+        self.assertEqual(send.call_count, 1)
+
+    def test_retry_limit_is_enforced(self):
+        send = unittest.mock.Mock()
+        with self.assertRaises(TimeoutError):
+            self.exercise([self.single] * 5, send, unittest.mock.Mock())
+        self.assertEqual(send.call_count, 2)
+
+    def test_unexpected_third_window_aborts(self):
+        send = unittest.mock.Mock()
+        extra = dict(self.double, native=[10, 20, 30])
+        with self.assertRaisesRegex(RuntimeError, "Unexpected extra"):
+            self.exercise([self.single, self.single, extra], send, unittest.mock.Mock())
+        self.assertEqual(send.call_count, 1)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ import urllib.parse
 import urllib.request
 import zipfile
 from sync_test import RegressionFailure, run_sync_test
+from window_setup import open_second_window
 
 
 def request_json(url, payload=None, method=None):
@@ -234,23 +235,32 @@ def main():
                 (evidence / "before-new-window.png").write_bytes(base64.b64decode(command("/screenshot")))
                 desktop("desktop-before-new-window.png")
                 stage("new_window_shortcut")
-                previous_handles = set(command("/window/handles"))
                 browser_pid = session["capabilities"]["moz:processID"]
-                report["native_windows_before"] = browser_windows(browser_pid)
-                subprocess.run([
-                    "powershell.exe", "-NoProfile", "-File",
-                    str(Path(__file__).parent / "open-window.ps1"),
-                    "-BrowserProcessId", str(browser_pid),
-                    "-WindowHandle", str(report["native_windows_before"][0]),
-                ], check=True, timeout=15)
-                deadline = time.monotonic() + 15
+
+                def observe_windows():
+                    command("/moz/context", {"context": "chrome"})
+                    chrome_handles = command("/window/handles")
+                    command("/moz/context", {"context": "content"})
+                    return {"native": browser_windows(browser_pid), "chrome": chrome_handles, "tabs": command("/window/handles")}
+
+                def send_new_window():
+                    subprocess.run([
+                        "powershell.exe", "-NoProfile", "-File",
+                        str(Path(__file__).parent / "open-window.ps1"),
+                        "-BrowserProcessId", str(browser_pid),
+                        "-WindowHandle", str(browser_windows(browser_pid)[0]),
+                    ], check=True, timeout=15)
+
+                def record_window_attempt(entry):
+                    report.setdefault("window_setup_attempts", []).append(entry)
+                    print("Window setup attempt: " + json.dumps(entry), flush=True)
+                    desktop("desktop-window-attempt-" + str(entry["attempt"]) + ".png")
+
+                initial_windows, final_windows = open_second_window(observe_windows, send_new_window, record_window_attempt)
+                report["native_windows_before"] = initial_windows["native"]
+                report["native_windows_after"] = final_windows["native"]
+                new_handles = set(final_windows["tabs"]) - set(initial_windows["tabs"])
                 second = None
-                while time.monotonic() < deadline:
-                    new_handles = set(command("/window/handles")) - previous_handles
-                    if new_handles and len(browser_windows(browser_pid)) == 2:
-                        break
-                    time.sleep(0.2)
-                report["native_windows_after"] = browser_windows(browser_pid)
                 desktop("desktop-after-new-window.png")
                 report["new_tab_handles"] = sorted(new_handles)
                 print("Native browser windows: " + json.dumps(report["native_windows_after"]), flush=True)

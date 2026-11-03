@@ -1,8 +1,6 @@
 param(
     [Parameter(Mandatory=$true)][int]$BrowserProcessId,
-    [long]$WindowHandle = 0,
-    [string]$NavigateNewTab = '',
-    [switch]$NewTabOnly
+    [Parameter(Mandatory=$true)][long]$WindowHandle
 )
 $ErrorActionPreference = 'Stop'
 $shell = New-Object -ComObject WScript.Shell
@@ -25,21 +23,6 @@ public static class CanaryWindow {
         throw 'Could not focus the requested disposable Zen window'
     }
 }
-if ($NewTabOnly) {
-    $shell.SendKeys('^t')
-    Write-Output 'Sent native New Tab shortcut to the requested Zen window'
-    exit 0
-}
-if ($NavigateNewTab) {
-    if ($NavigateNewTab -notmatch '^http://127\.0\.0\.1:[0-9]+/[a-z-]+$') {
-        throw 'Only a simple loopback fixture URL is allowed'
-    }
-    $shell.SendKeys('^t')
-    $shell.SendKeys('^l')
-    $shell.SendKeys($NavigateNewTab)
-    $shell.SendKeys('{ENTER}')
-    Write-Output "Opened fixture through native New Tab and address bar: $NavigateNewTab"
-    exit 0
-}
+Write-Output ("Foreground window before Ctrl+N: " + [CanaryWindow]::GetForegroundWindow().ToInt64())
 $shell.SendKeys('^n')
 Write-Output 'Sent native Windows Ctrl+N to the disposable Zen process'

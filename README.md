@@ -1,4 +1,15 @@
-# Zen Windows sync canary — P0 draft
+# Zen Windows sync canary
+
+## Verified release comparison
+
+Both runs below used the same test revision (23a63ca) and released Windows x64 binaries on GitHub-hosted Windows runners:
+
+| Release | Focused live-state result | Evidence |
+| --- | --- | --- |
+| 1.21.8b | PASS: same document token, counter, history and settled scroll in B; trusted click in B; updated state back in A | [Run 41707427309](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707427309) |
+| 1.24b | FAIL: selecting the matching shared tab in B leaves visible empty about:blank content | [Run 41707421534](https://github.com/gakera/zen-window-sync-canary/actions/runs/41707421534) |
+
+This demonstrates a meaningful working/affected contrast for this scenario. It is not a blanket safety claim or proof of the exact first affected release. Native window creation has intermittently failed before the regression scenario; those runs stay UNVERIFIED, with bounded setup retries and separate attempt evidence added afterward.
 
 Status: **FAIL observed on 1.24b** in [41706707017](https://github.com/gakera/zen-window-sync-canary/actions/runs/41706707017). A real link click created a fixture tab in A; after state mutations and selection of a distractor in A, the same shared tab ID selected in B displayed a visible, empty about:blank document. The source and destination WebDriver content handles were bound to that same Zen shared ID, and the selected ID was rechecked after binding. Full desktop screenshots show the blank selected tab and the source distractor. Repetition and historical controls are pending; this observation does not establish overall harness reliability or a safe release.
 
@@ -21,6 +32,8 @@ The manually triggered workflow downloads a real stable Windows x64 Zen installe
 P0 success is automation evidence only; the subsequent synchronized-state scenario determines the scoped PASS/FAIL result. Errors identify their stage and retain trace logs. Runner timeout or setup failure may leave only partial evidence and must be treated as UNVERIFIED. Artifacts expire after seven days; inspect them before sharing. They contain only a disposable local fixture, but driver traces include profile paths.
 
 ## Run locally
+
+Window-creation hardening: wait for Zen startup/workspace initialization, verify the foreground HWND, then allow at most three New Window attempts with a ten-second observation window each. Every attempt logs native windows, browser-UI windows and content handles and saves a desktop screenshot. Retry only when both window observers still report one window and no new tab handle; a late, partial or extra window blocks duplicate input. Setup retries never retry or overwrite a failed regression assertion.
 
 Screenshot scope: `browser.png`, `failure.png`, `before-new-window.png`, and `second-window.png` are WebDriver page viewport captures and exclude browser chrome. Files prefixed `desktop-` capture the entire Windows runner's virtual desktop, including browser frames, sidebar tabs, and any overlap. They show only the disposable CI desktop, never the user's Mac. Desktop capture errors are recorded separately in report.json.
 
