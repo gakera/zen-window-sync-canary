@@ -1,5 +1,19 @@
 # Zen Windows sync canary
 
+## Live status
+
+**[Open the pinned release-status dashboard](https://github.com/gakera/zen-window-sync-canary/issues/1)** · [Run / retest a release](https://github.com/gakera/zen-window-sync-canary/actions/workflows/feasibility.yml)
+
+The dashboard headline tracks the latest published stable Zen release, independently of historical/manual test runs. Daily release discovery runs at **06:17 UTC** on Ubuntu; Windows runs only for a new release ID, asset ID/digest or runtime test-suite fingerprint. An unchanged FAIL remains a FAIL on the dashboard even if the lightweight daily workflow is green. No workflow badge is used as a release-safety signal.
+
+Manual runs accept an exact release tag or `latest`. **Retest** defaults to true; turn it off to exercise the automatic discovery/deduplication path. UNVERIFIED identities get at most three automatic attempts, then require a manual forced retest. Results from setup failures or missing artifacts remain UNVERIFIED. Only main-branch runs can update the status issue.
+
+Actual tests add durable result comments to the status issue; unchanged daily checks only refresh the summary. Subscribe to that issue for result notifications. The body renderer is serialized, while test jobs run independently; it rebuilds from durable comments so parallel tests do not lose history. A source-file fingerprint prevents documentation/reporting-only edits from forcing another Windows run. Seeded controls are checked against the actual recorded test revision's runtime files before import.
+
+Evidence: screenshots and browser logs expire after 7 days, compact machine-readable result artifacts after 90 days, and result comments remain until removed. The dashboard shows the last successful lookup time; if older than 48 hours, treat it as stale. GitHub can delay schedules and disables public scheduled workflows after 60 days without repository activity. Check Actions and re-enable the workflow if necessary.
+
+Native GitHub options used here: Actions summaries for each check, artifacts for screenshots/logs, and a pinned issue for the durable three-state status. GitHub also offers workflow badges and Pages; a single latest-run badge would conflate historical control runs with the latest release verdict. Pages can be added later if a separate visual site is useful.
+
 ## Verified release comparison
 
 Both runs below used the same hardened test revision (ecfa7ab) and released Windows x64 binaries on GitHub-hosted Windows runners:
@@ -39,7 +53,7 @@ Window-creation hardening: wait for Zen startup/workspace initialization, verify
 
 Screenshot scope: `browser.png`, `failure.png`, `before-new-window.png`, and `second-window.png` are WebDriver page viewport captures and exclude browser chrome. Files prefixed `desktop-` capture the entire Windows runner's virtual desktop, including browser frames, sidebar tabs, and any overlap. They show only the disposable CI desktop, never the user's Mac. Desktop capture errors are recorded separately in report.json.
 
-`python3 -m unittest -v` runs release-selection checks on macOS without downloads or browser launch. `probe.py` runs only on Windows. It writes evidence/report.json and evidence/summary.md. Use workflow_dispatch with `latest` or an exact stable release tag. No schedule is enabled before feasibility is demonstrated.
+`python3 -m unittest -v` runs local harness, release-discovery and reporting checks on macOS without downloads or browser launch. `probe.py` runs only on Windows. It writes evidence/report.json and evidence/summary.md. Use workflow_dispatch with `latest` or an exact stable release tag. `reporting.py` handles discovery, deduplication, durable status comments and dashboard refresh through GitHub's API.
 
 ## Verified research, 2026-11-03
 
