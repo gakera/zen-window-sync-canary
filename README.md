@@ -25,6 +25,8 @@ The workflow always exits nonzero and reports UNVERIFIED at this phase, even if 
 
 ## Next gates
 
+Native Ctrl+N in [41703349658](https://github.com/gakera/zen-window-sync-canary/actions/runs/41703349658) expanded WebDriver handles from two to four. WebDriver exposes tabs, so requiring exactly one new handle was an incorrect probe assumption. The next probe enumerates visible MozillaWindowClass windows owned by the disposable browser PID, requires a one-to-two native window transition, then finds a second-window tab by changing its window geometry and verifying the original window's geometry remains unchanged. This establishes separate windows even with multiple mirrored tab handles.
+
 Third run [41702868321](https://github.com/gakera/zen-window-sync-canary/actions/runs/41702868321) found no new WebDriver handle after a WebDriver Ctrl+N action. The next attempt activates the disposable browser process and sends Ctrl+N through native Windows input using WScript.Shell, then independently polls WebDriver handles. A new handle alone still needs validation that it represents the intended separate synchronized browser window before regression coverage can be claimed.
 
 Second run [41702499653](https://github.com/gakera/zen-window-sync-canary/actions/runs/41702499653) confirmed a visible fixture and trusted click after bypassing onboarding. Zen explicitly rejects WebDriver's New Window endpoint (`openWindow() not supported in Zen`). The next probe uses the standard Ctrl+N keyboard action, waits up to 15 seconds for a new handle, and attempts switching. Screenshots are saved before window creation and in the second window as well as on failure. This workaround is experimental until runner evidence confirms it.

@@ -87,6 +87,32 @@ def wait_ready(url, process):
     raise TimeoutError("geckodriver readiness timeout")
 
 
+def browser_windows(process_id):
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    windows = []
+
+    @callback_type
+    def collect(handle, parameter):
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(handle, ctypes.byref(owner))
+        name = ctypes.create_unicode_buffer(256)
+        user32.GetClassNameW(handle, name, len(name))
+        if owner.value == process_id and user32.IsWindowVisible(handle) and name.value == "MozillaWindowClass":
+            windows.append(int(handle))
+        return True
+
+    user32.EnumWindows(collect, 0)
+    return windows
+
+
 def main():
     evidence = Path("evidence")
     evidence.mkdir(exist_ok=True)
@@ -174,24 +200,39 @@ def main():
                 (evidence / "before-new-window.png").write_bytes(base64.b64decode(command("/screenshot")))
                 stage("new_window_shortcut")
                 previous_handles = set(command("/window/handles"))
+                browser_pid = session["capabilities"]["moz:processID"]
+                report["native_windows_before"] = browser_windows(browser_pid)
                 subprocess.run([
                     "powershell.exe", "-NoProfile", "-File",
                     str(Path(__file__).parent / "open-window.ps1"),
-                    "-BrowserProcessId", str(session["capabilities"]["moz:processID"]),
+                    "-BrowserProcessId", str(browser_pid),
                 ], check=True, timeout=15)
                 deadline = time.monotonic() + 15
                 second = None
                 while time.monotonic() < deadline:
                     new_handles = set(command("/window/handles")) - previous_handles
-                    if len(new_handles) == 1:
-                        second = new_handles.pop()
+                    if new_handles and len(browser_windows(browser_pid)) == 2:
                         break
-                    if len(new_handles) > 1:
-                        raise RuntimeError("New Window shortcut created ambiguous window handles")
                     time.sleep(0.2)
+                report["native_windows_after"] = browser_windows(browser_pid)
+                report["new_tab_handles"] = sorted(new_handles)
+                print("Native browser windows: " + json.dumps(report["native_windows_after"]), flush=True)
+                if len(report["native_windows_before"]) != 1 or len(report["native_windows_after"]) != 2:
+                    raise RuntimeError("Expected one native browser window before Ctrl+N and two afterward")
+                command("/window", {"handle": first})
+                baseline_rect = command("/window/rect", {"x": 10, "y": 10, "width": 1100, "height": 750})
+                for candidate in sorted(new_handles):
+                    command("/window", {"handle": candidate})
+                    candidate_rect = command("/window/rect", {"x": 180, "y": 100, "width": 1000, "height": 650})
+                    command("/window", {"handle": first})
+                    source_rect = command("/window/rect")
+                    if source_rect == baseline_rect and candidate_rect != baseline_rect:
+                        second = candidate
+                        break
+                    baseline_rect = command("/window/rect", {"x": 10, "y": 10, "width": 1100, "height": 750})
                 if second is None:
-                    raise TimeoutError("Ctrl+N did not expose a new window handle")
-                print("New Window shortcut exposed a second handle", flush=True)
+                    raise RuntimeError("Could not map a new tab handle to the independent second browser window")
+                print("Confirmed second native browser window and independent window geometry", flush=True)
                 report["window_creation"] = "Native Windows Ctrl+N via WScript.Shell"
                 stage("switch_second_window")
                 command("/window", {"handle": second})
