@@ -200,7 +200,8 @@ def main():
                 port = listener.getsockname()[1]
             stage("webdriver_session")
             with (evidence / "geckodriver.log").open("w") as log:
-                driver_process = subprocess.Popen([str(root / "geckodriver.exe"), "--port", str(port), "--log", "trace", "--allow-system-access"], stdout=log, stderr=subprocess.STDOUT)
+                browser_environment = {key: value for key, value in os.environ.items() if key != "GITHUB_TOKEN"}
+                driver_process = subprocess.Popen([str(root / "geckodriver.exe"), "--port", str(port), "--log", "trace", "--allow-system-access"], stdout=log, stderr=subprocess.STDOUT, env=browser_environment)
                 base_url = f"http://127.0.0.1:{port}"
                 wait_ready(base_url + "/status", driver_process)
                 profile = root / "profile"
@@ -266,7 +267,6 @@ def main():
                 report["window_creation"] = "Native Windows Ctrl+N via WScript.Shell"
                 stage("switch_second_window")
                 command("/window", {"handle": second})
-                command("/url", {"url": f"http://127.0.0.1:{server.server_port}/?second"})
                 (evidence / "second-window.png").write_bytes(base64.b64decode(command("/screenshot")))
                 desktop("desktop-second-window.png")
                 command("/window", {"handle": first})

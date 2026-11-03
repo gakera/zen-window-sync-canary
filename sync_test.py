@@ -48,11 +48,17 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
         command("/element/" + element["element-6066-11e4-a52e-4f735466cecf"] + "/click", {})
 
     def open_native(path):
+        context("chrome")
+        command("/window", {"handle": source_window})
         subprocess.run([
             "powershell.exe", "-NoProfile", "-File", str(Path(__file__).parent / "open-window.ps1"),
             "-BrowserProcessId", str(browser_pid), "-WindowHandle", str(source_hwnd),
-            "-NavigateNewTab", f"http://127.0.0.1:{port}/{path}",
+            "-NewTabOnly",
         ], check=True, timeout=20)
+        address = command("/element", {"using": "css selector", "value": "#urlbar-input"})
+        address_id = address["element-6066-11e4-a52e-4f735466cecf"]
+        command("/element/" + address_id + "/click", {})
+        command("/element/" + address_id + "/value", {"text": "\ue009a\ue000" + f"http://127.0.0.1:{port}/{path}" + "\ue007"})
 
     def select_tab(window_handle, tab_id):
         context("chrome")
@@ -75,7 +81,10 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
         report[label] = actual
         print(label + ": " + json.dumps(actual), flush=True)
         desktop("desktop-" + label + ".png")
-        (evidence / (label + ".png")).write_bytes(base64.b64decode(command("/screenshot")))
+        try:
+            (evidence / (label + ".png")).write_bytes(base64.b64decode(command("/screenshot")))
+        except Exception as error:
+            report.setdefault("page_capture_errors", []).append(str(error))
         differences = state_differences(expected, actual)
         if differences:
             raise RegressionFailure(label + ": " + "; ".join(differences))
@@ -95,7 +104,10 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     open_native("sync-fixture")
     command("/window", {"handle": source_window})
     fixture_url = f"http://127.0.0.1:{port}/sync-fixture"
-    tab = until(lambda: next((tab for tab in inventory() if tab["url"] == fixture_url and tab["selected"] and not tab["empty"] and tab["id"]), None), "Normal address-bar navigation did not produce a materialized fixture tab")
+    try:
+        tab = until(lambda: next((tab for tab in inventory() if tab["url"] == fixture_url and tab["selected"] and not tab["empty"] and tab["id"]), None), "Normal address-bar navigation did not produce a materialized fixture tab")
+    finally:
+        report["source_tabs_after_navigation"] = inventory()
     shared_id = tab["id"]
     report["shared_tab_id"] = shared_id
     report["source_tabs_initial"] = inventory()

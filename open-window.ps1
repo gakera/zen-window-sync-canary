@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory=$true)][int]$BrowserProcessId,
     [long]$WindowHandle = 0,
-    [string]$NavigateNewTab = ''
+    [string]$NavigateNewTab = '',
+    [switch]$NewTabOnly
 )
 $ErrorActionPreference = 'Stop'
 $shell = New-Object -ComObject WScript.Shell
@@ -23,6 +24,11 @@ public static class CanaryWindow {
     if ([CanaryWindow]::GetForegroundWindow().ToInt64() -ne $WindowHandle) {
         throw 'Could not focus the requested disposable Zen window'
     }
+}
+if ($NewTabOnly) {
+    $shell.SendKeys('^t')
+    Write-Output 'Sent native New Tab shortcut to the requested Zen window'
+    exit 0
 }
 if ($NavigateNewTab) {
     if ($NavigateNewTab -notmatch '^http://127\.0\.0\.1:[0-9]+/[a-z-]+$') {
