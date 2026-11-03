@@ -134,6 +134,17 @@ def main():
         report["stage"] = name
         print(time.strftime("%H:%M:%S UTC", time.gmtime()) + " | " + name, flush=True)
 
+    def desktop(name):
+        try:
+            subprocess.run([
+                "powershell.exe", "-NoProfile", "-File",
+                str(Path(__file__).parent / "capture-desktop.ps1"),
+                "-OutputPath", str((evidence / name).resolve()),
+            ], check=True, timeout=20)
+            print("Desktop screenshot: " + name, flush=True)
+        except Exception:
+            report.setdefault("desktop_capture_errors", []).append(traceback.format_exc())
+
     with tempfile.TemporaryDirectory(prefix="zen-canary-") as temporary:
         root = Path(temporary)
         try:
@@ -198,6 +209,7 @@ def main():
                     raise RuntimeError("P0 real-click/visibility evidence unavailable")
                 report["first_click"] = state
                 (evidence / "before-new-window.png").write_bytes(base64.b64decode(command("/screenshot")))
+                desktop("desktop-before-new-window.png")
                 stage("new_window_shortcut")
                 previous_handles = set(command("/window/handles"))
                 browser_pid = session["capabilities"]["moz:processID"]
@@ -215,6 +227,7 @@ def main():
                         break
                     time.sleep(0.2)
                 report["native_windows_after"] = browser_windows(browser_pid)
+                desktop("desktop-after-new-window.png")
                 report["new_tab_handles"] = sorted(new_handles)
                 print("Native browser windows: " + json.dumps(report["native_windows_after"]), flush=True)
                 if len(report["native_windows_before"]) != 1 or len(report["native_windows_after"]) != 2:
@@ -238,6 +251,7 @@ def main():
                 command("/window", {"handle": second})
                 command("/url", {"url": f"http://127.0.0.1:{server.server_port}/?second"})
                 (evidence / "second-window.png").write_bytes(base64.b64decode(command("/screenshot")))
+                desktop("desktop-second-window.png")
                 command("/window", {"handle": first})
                 report["returned_window"] = command("/window")
                 if report["returned_window"] != first or second == first:
@@ -248,6 +262,8 @@ def main():
         except Exception:
             report["error"] = traceback.format_exc()
             print(report["error"], flush=True)
+            if platform.system() == "Windows":
+                desktop("desktop-failure.png")
             if session_url:
                 try:
                     screenshot = request_json(session_url + "/screenshot")["value"]

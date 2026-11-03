@@ -12,6 +12,8 @@ The workflow always exits nonzero and reports UNVERIFIED at this phase, even if 
 
 ## Run locally
 
+Screenshot scope: `browser.png`, `failure.png`, `before-new-window.png`, and `second-window.png` are WebDriver page viewport captures and exclude browser chrome. Files prefixed `desktop-` capture the entire Windows runner's virtual desktop, including browser frames, sidebar tabs, and any overlap. They show only the disposable CI desktop, never the user's Mac. Desktop capture errors are recorded separately in report.json.
+
 `python3 -m unittest -v` runs release-selection checks on macOS without downloads or browser launch. `probe.py` runs only on Windows. It writes evidence/report.json and evidence/summary.md. Use workflow_dispatch with `latest` or an exact stable release tag. No schedule is enabled before feasibility is demonstrated.
 
 ## Verified research, 2026-11-03
