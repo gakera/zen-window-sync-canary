@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Zen canary fixture</title>
+<style>body {font: 20px sans-serif} #controls {position:fixed;top:0;background:white;padding:20px} main {height:5000px;padding-top:160px}</style>
+<div id="controls"><button id="increment">Increment</button> <button id="history">Push history</button> <output id="state"></output></div>
+<main>Scrollable local fixture</main>
+<script>
+const token = crypto.randomUUID();
+let counter = 0;
+let trustedClick = false;
+window.snapshot = () => ({token, counter, trustedClick, scroll: scrollY, url: location.href, visibility: document.visibilityState});
+function render() { document.querySelector('#state').textContent = JSON.stringify(snapshot()); }
+document.querySelector('#increment').onclick = event => { counter++; trustedClick = event.isTrusted; render(); };
+document.querySelector('#history').onclick = () => { history.pushState({counter}, '', '?state=' + counter); render(); };
+addEventListener('scroll', render);
+addEventListener('visibilitychange', render);
+render();
+</script>
