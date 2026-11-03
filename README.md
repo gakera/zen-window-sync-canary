@@ -25,6 +25,8 @@ The workflow always exits nonzero and reports UNVERIFIED at this phase, even if 
 
 ## Next gates
 
+Third run [41702868321](https://github.com/gakera/zen-window-sync-canary/actions/runs/41702868321) found no new WebDriver handle after a WebDriver Ctrl+N action. The next attempt activates the disposable browser process and sends Ctrl+N through native Windows input using WScript.Shell, then independently polls WebDriver handles. A new handle alone still needs validation that it represents the intended separate synchronized browser window before regression coverage can be claimed.
+
 Second run [41702499653](https://github.com/gakera/zen-window-sync-canary/actions/runs/41702499653) confirmed a visible fixture and trusted click after bypassing onboarding. Zen explicitly rejects WebDriver's New Window endpoint (`openWindow() not supported in Zen`). The next probe uses the standard Ctrl+N keyboard action, waits up to 15 seconds for a new handle, and attempts switching. Screenshots are saved before window creation and in the second window as well as on failure. This workaround is experimental until runner evidence confirms it.
 
 First Windows run [41702080529](https://github.com/gakera/zen-window-sync-canary/actions/runs/41702080529) successfully extracted verified Zen 1.24b and established a headed WebDriver session. The first click failed with `element not interactable`; screenshot capture reported a 0×0 content area. Result: UNVERIFIED, before any sync assertion. The next attempt sets the release's `zen.welcome-screen.seen` preference to bypass first-run onboarding (whose source hides browser content), sets the window dimensions, and logs viewport dimensions and full WebDriver errors. Onboarding is a suspected cause, pending confirmation by the rerun.

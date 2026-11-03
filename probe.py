@@ -171,12 +171,11 @@ def main():
                 (evidence / "before-new-window.png").write_bytes(base64.b64decode(command("/screenshot")))
                 stage("new_window_shortcut")
                 previous_handles = set(command("/window/handles"))
-                command("/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": [
-                    {"type": "keyDown", "value": "\ue009"},
-                    {"type": "keyDown", "value": "n"},
-                    {"type": "keyUp", "value": "n"},
-                    {"type": "keyUp", "value": "\ue009"},
-                ]}]})
+                subprocess.run([
+                    "powershell.exe", "-NoProfile", "-File",
+                    str(Path(__file__).parent / "open-window.ps1"),
+                    "-BrowserProcessId", str(session["capabilities"]["moz:processID"]),
+                ], check=True, timeout=15)
                 deadline = time.monotonic() + 15
                 second = None
                 while time.monotonic() < deadline:
@@ -190,7 +189,7 @@ def main():
                 if second is None:
                     raise TimeoutError("Ctrl+N did not expose a new window handle")
                 print("New Window shortcut exposed a second handle", flush=True)
-                report["window_creation"] = "Ctrl+N keyboard action"
+                report["window_creation"] = "Native Windows Ctrl+N via WScript.Shell"
                 stage("switch_second_window")
                 command("/window", {"handle": second})
                 command("/url", {"url": f"http://127.0.0.1:{server.server_port}/?second"})
