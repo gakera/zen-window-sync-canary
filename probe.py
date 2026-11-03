@@ -236,6 +236,7 @@ def main():
                     "powershell.exe", "-NoProfile", "-File",
                     str(Path(__file__).parent / "open-window.ps1"),
                     "-BrowserProcessId", str(browser_pid),
+                    "-WindowHandle", str(report["native_windows_before"][0]),
                 ], check=True, timeout=15)
                 deadline = time.monotonic() + 15
                 second = None
@@ -284,8 +285,9 @@ def main():
             report["reason"] = str(error)
             print("Behavioral regression: " + str(error), flush=True)
             desktop("desktop-regression-failure.png")
-        except Exception:
+        except Exception as error:
             report["error"] = traceback.format_exc()
+            report["reason"] = "Automation/setup failed at " + report["stage"] + ": " + str(error)
             print(report["error"], flush=True)
             if platform.system() == "Windows":
                 desktop("desktop-failure.png")
