@@ -1,15 +1,39 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Zen canary fixture</title>
-<style>body {font: 20px sans-serif} #controls {position:fixed;top:0;background:white;padding:20px} main {height:5000px;padding-top:160px}</style>
-<div id="controls"><button id="increment">Increment</button> <button id="history">Push history</button> <a id="open-shared" href="/sync-fixture" target="_blank">Open sync tab</a> <a id="open-distractor" href="/distractor" target="_blank">Open distractor</a> <output id="state"></output></div>
-<main>Scrollable local fixture</main>
+<title>Shared counter</title>
+<style>
+body { margin: 0; font: 17px system-ui, sans-serif; background: #edf3fa; color: #15283e; }
+#controls { position: fixed; inset: 16px 16px auto; background: white; padding: 24px; border: 2px solid #2563eb; border-radius: 12px; }
+h1 { margin: 0 0 8px; font-size: 28px; }
+p { margin: 8px 0 18px; line-height: 1.5; }
+button, a { display: inline-block; font: inherit; padding: 8px 12px; margin: 4px 4px 4px 0; }
+button { cursor: pointer; background: #2563eb; border: 0; border-radius: 6px; color: white; }
+.metrics { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
+.metric { background: #edf3fa; padding: 12px 18px; border-radius: 8px; }
+.metric strong { display: block; font-size: 30px; }
+#document-id { font: 14px ui-monospace, monospace; overflow-wrap: anywhere; }
+main { height: 5000px; padding-top: 460px; }
+</style>
+<div id="controls">
+  <h1>Shared counter</h1>
+  <p>This is one live page, shared between Zen windows. Its count and page ID should survive the switch.</p>
+  <div class="metrics"><div class="metric">Clicks<strong id="count">0</strong></div><div class="metric">Scroll position<strong id="scroll">0 px</strong></div></div>
+  <p>Page ID: <span id="document-id"></span></p>
+  <button id="increment">Add one</button><button id="history">Change page state</button>
+  <div><a id="open-shared" href="/sync-fixture" target="_blank">Open shared counter</a><a id="open-distractor" href="/distractor" target="_blank">Open other page</a></div>
+</div>
+<main>Scrollable test page</main>
 <script>
 const token = crypto.randomUUID();
 let counter = 0;
 let trustedClick = false;
 window.snapshot = () => ({token, counter, trustedClick, scroll: scrollY, url: location.href, visibility: document.visibilityState, width: innerWidth, height: innerHeight});
-function render() { document.querySelector('#state').textContent = JSON.stringify(snapshot()); }
+document.title = location.pathname === '/sync-fixture' ? 'Shared counter' : 'Start here';
+function render() {
+  document.querySelector('#count').textContent = counter;
+  document.querySelector('#scroll').textContent = Math.round(scrollY) + ' px';
+  document.querySelector('#document-id').textContent = token;
+}
 document.querySelector('#increment').onclick = event => { counter++; trustedClick = event.isTrusted; render(); fetch('/events', {method: 'POST', body: JSON.stringify(snapshot())}); };
 document.querySelector('#history').onclick = () => { history.pushState({counter}, '', '?state=' + counter); render(); };
 addEventListener('scroll', render);

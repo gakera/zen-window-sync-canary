@@ -93,6 +93,7 @@ def run_sync_test(command, desktop, stage, report, evidence, port, events):
     if len(windows) != 2 or source_window not in windows:
         raise RuntimeError("Browser UI mode did not expose exactly two actual browser windows")
     target_window = next(handle for handle in windows if handle != source_window)
+    report["window_roles"] = {"source": source_window, "target": target_window}
     command("/execute/async", {"script": "const done = arguments[arguments.length - 1]; Promise.all([gZenWorkspaces.promiseInitialized, gZenStartup.promiseInitialized]).then(() => done(true), error => done({error: String(error)}));", "args": []})
     prefs = script("return {enabled: Services.prefs.getBoolPref('zen.window-sync.enabled'), onlyPinned: Services.prefs.getBoolPref('zen.window-sync.sync-only-pinned-tabs')};")
     report["sync_preferences"] = prefs
@@ -141,6 +142,7 @@ def run_sync_test(command, desktop, stage, report, evidence, port, events):
     context("chrome")
     command("/window", {"handle": source_window})
     distractor = until(lambda: next((tab for tab in inventory() if tab["selected"] and tab["url"].endswith("/distractor") and not tab["empty"]), None), "Source window did not select the distractor tab")
+    report["distractor_tab_id"] = distractor["id"]
     report["source_tabs_deselected"] = inventory()
     command("/window", {"handle": target_window})
     try:
@@ -165,3 +167,49 @@ def run_sync_test(command, desktop, stage, report, evidence, port, events):
     check_state(expected, "sync-return-state")
     report["sync_scenario_complete"] = True
     stage("sync_complete")
+
+
+def capture_clean_comparison(command, desktop, report):
+    def script(code):
+        return command("/execute/sync", {"script": code, "args": []})
+
+    def select(window_handle, tab_id):
+        command("/moz/context", {"context": "chrome"})
+        command("/window", {"handle": window_handle})
+        element = command("/element", {"using": "css selector", "value": '[id=' + json.dumps(tab_id) + ']'})
+        command("/element/" + element["element-6066-11e4-a52e-4f735466cecf"] + "/click", {})
+        until(lambda: script("return gBrowser.selectedTab.id") == tab_id, "Clean capture could not select the intended tab")
+
+    protected = {report["shared_tab_id"], report["distractor_tab_id"]}
+    closed = []
+    for window_handle in report["window_roles"].values():
+        command("/moz/context", {"context": "chrome"})
+        command("/window", {"handle": window_handle})
+        for attempt in range(20):
+            tabs = script("return Array.from(gBrowser.tabs, tab => ({id: tab.id, empty: tab.hasAttribute('zen-empty-tab')}));")
+            extra = next((tab for tab in tabs if not tab["empty"] and tab["id"] not in protected), None)
+            if extra is None:
+                break
+            element = command("/element", {"using": "css selector", "value": '[id=' + json.dumps(extra["id"]) + ']'})
+            command("/actions", {"actions": [{"type": "pointer", "id": "cleanup-mouse", "parameters": {"pointerType": "mouse"}, "actions": [
+                {"type": "pointerMove", "origin": element, "x": 0, "y": 0},
+                {"type": "pointerDown", "button": 1},
+                {"type": "pointerUp", "button": 1},
+            ]}]})
+            until(lambda: not script("return !!document.getElementById(" + json.dumps(extra["id"]) + ")"), "Setup tab did not close through normal UI")
+            closed.append(extra["id"])
+        else:
+            raise RuntimeError("Clean capture exceeded setup-tab cleanup limit")
+    select(report["window_roles"]["source"], report["distractor_tab_id"])
+    select(report["window_roles"]["target"], report["shared_tab_id"])
+    content_handle = script("const {NavigableManager} = ChromeUtils.importESModule('chrome://remote/content/shared/NavigableManager.sys.mjs'); return NavigableManager.getIdForBrowser(gBrowser.selectedBrowser);")
+    command("/moz/context", {"context": "content"})
+    command("/window", {"handle": content_handle})
+    actual = script("return typeof snapshot === 'function' ? snapshot() : {url: location.href, text: document.body?.innerText, visibility: document.visibilityState};")
+    if report["classification"] == "PASS":
+        if state_differences(report["sync-return-state"], actual):
+            raise RuntimeError("Presentation cleanup changed the passing state; preserving original captures only")
+    elif report.get("sync-target-state", {}).get("url") != "about:blank" or actual.get("url") != "about:blank" or actual.get("text"):
+        raise RuntimeError("Presentation cleanup changed the observed failure; preserving original captures only")
+    report["clean_capture"] = {"closed_setup_tabs": closed, "target_state": actual}
+    desktop("desktop-clean-comparison.png")

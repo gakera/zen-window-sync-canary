@@ -16,7 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
-from sync_test import RegressionFailure, run_sync_test
+from sync_test import RegressionFailure, capture_clean_comparison, run_sync_test
 from window_setup import open_second_window
 
 
@@ -68,7 +68,7 @@ class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         body = (Path(__file__).parent / "fixture.html").read_bytes()
         if self.path == "/distractor":
-            body = b'<!doctype html><title>Canary distractor</title><h1>Different tab selected</h1>'
+            body = b'<!doctype html><title>Other page</title><style>body{font:20px system-ui;padding:24px;background:#f5f5f5;color:#263445}</style><h1>Other page</h1><p>The shared counter is open in another tab.</p>'
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
@@ -313,6 +313,12 @@ def main():
                 except Exception:
                     pass
         finally:
+            if report["classification"] in ("PASS", "FAIL") and report.get("distractor_tab_id"):
+                try:
+                    capture_clean_comparison(command, desktop, report)
+                except Exception as error:
+                    report["clean_capture_error"] = str(error)
+                    print("Clean presentation capture unavailable: " + str(error), flush=True)
             if session_url:
                 try:
                     request_json(session_url, method="DELETE")
