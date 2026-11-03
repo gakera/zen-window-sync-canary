@@ -69,6 +69,18 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
         until(lambda: script("return gBrowser.selectedTab.id") == tab_id, "UI click did not select the intended shared tab")
         report.setdefault("selections", []).append({"window": window_handle, "tab_id": tab_id})
 
+    def selected_content():
+        selected = script("const { NavigableManager } = ChromeUtils.importESModule('chrome://remote/content/shared/NavigableManager.sys.mjs'); return {tab_id: gBrowser.selectedTab.id, handle: NavigableManager.getIdForBrowser(gBrowser.selectedBrowser)};")
+        if not selected["handle"]:
+            raise RuntimeError("Selected browser tab has no WebDriver content handle")
+        context("content")
+        command("/window", {"handle": selected["handle"]})
+        context("chrome")
+        if script("return gBrowser.selectedTab.id") != selected["tab_id"]:
+            raise RuntimeError("Binding WebDriver content unexpectedly changed the UI-selected tab")
+        report.setdefault("content_bindings", []).append(selected)
+        context("content")
+
     def observe():
         return script("return typeof window.snapshot === 'function' ? window.snapshot() : {url: location.href, title: document.title, readyState: document.readyState, visibility: document.visibilityState, width: innerWidth, height: innerHeight, text: document.body?.innerText?.slice(0,500)}")
 
@@ -114,7 +126,7 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     report["shared_tab_id"] = shared_id
     report["source_tabs_initial"] = inventory()
     print("Materialized fixture tab: " + shared_id, flush=True)
-    context("content")
+    selected_content()
     if command("/url") != fixture_url:
         raise RuntimeError("WebDriver content context did not follow the selected fixture tab")
     click("#increment")
@@ -140,7 +152,7 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     report["target_tabs"] = inventory()
     stage("sync_select_target")
     select_tab(target_window, shared_id)
-    context("content")
+    selected_content()
     check_state(expected, "sync-target-state")
     click("#increment")
     expected = dict(expected, counter=2)
@@ -150,7 +162,7 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     stage("sync_return_source")
     select_tab(target_window, distractor["id"])
     select_tab(source_window, shared_id)
-    context("content")
+    selected_content()
     check_state(expected, "sync-return-state")
     report["sync_scenario_complete"] = True
     stage("sync_complete")
