@@ -214,6 +214,11 @@ def main():
                     return request_json(session_url + path, payload, method)["value"]
 
                 stage("click_and_window_switch")
+                command("/moz/context", {"context": "chrome"})
+                initialized = command("/execute/async", {"script": "const done = arguments[arguments.length - 1]; Promise.all([gZenWorkspaces.promiseInitialized, gZenStartup.promiseInitialized]).then(() => done(true), error => done({error: String(error)}));", "args": []})
+                if initialized is not True:
+                    raise RuntimeError("Zen startup did not initialize: " + str(initialized))
+                command("/moz/context", {"context": "content"})
                 command("/window/rect", {"width": 1200, "height": 800})
                 command("/url", {"url": f"http://127.0.0.1:{server.server_port}/"})
                 viewport = command("/execute/sync", {"script": "return {width: innerWidth, height: innerHeight, visibility: document.visibilityState}", "args": []})
@@ -277,7 +282,7 @@ def main():
                 (evidence / "browser.png").write_bytes(base64.b64decode(command("/screenshot")))
                 report["p0_complete"] = True
                 stage("p0_complete")
-                run_sync_test(command, desktop, stage, report, evidence, browser_pid, report["native_windows_before"][0], server.server_port, Fixture.events)
+                run_sync_test(command, desktop, stage, report, evidence, server.server_port, Fixture.events)
                 report["classification"] = "PASS"
                 report["reason"] = "Focused synchronized-tab live-state scenario passed; broader update safety is not established"
         except RegressionFailure as error:

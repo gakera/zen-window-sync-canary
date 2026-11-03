@@ -29,7 +29,7 @@ def until(predicate, description, timeout=15):
     raise TimeoutError(description)
 
 
-def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source_hwnd, port, events):
+def run_sync_test(command, desktop, stage, report, evidence, port, events):
     stage("sync_ui_setup")
 
     def context(name):
@@ -117,7 +117,21 @@ def run_sync_test(command, desktop, stage, report, evidence, browser_pid, source
     click("#increment")
     click("#history")
     command("/actions", {"actions": [{"type": "wheel", "id": "scroll", "actions": [{"type": "scroll", "x": 500, "y": 400, "deltaX": 0, "deltaY": 700, "duration": 300, "origin": "viewport"}]}]})
-    expected = until(lambda: (state if (state := observe()).get("scroll", 0) >= 500 else None), "Fixture did not scroll")
+    last_scroll = None
+    last_change = time.monotonic()
+
+    def settled_scroll():
+        nonlocal last_scroll, last_change
+        state = observe()
+        position = state.get("scroll", 0)
+        if position != last_scroll:
+            last_scroll = position
+            last_change = time.monotonic()
+        if position >= 500 and time.monotonic() - last_change >= 0.6:
+            return state
+        return None
+
+    expected = until(settled_scroll, "Fixture scroll did not settle")
     if expected.get("counter") != 1 or not expected.get("trustedClick") or "?state=1" not in expected.get("url", ""):
         raise RuntimeError("Source fixture live-state setup did not complete")
     report["expected_state"] = expected
