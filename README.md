@@ -14,6 +14,8 @@ Evidence: screenshots and browser logs expire after 7 days, compact machine-read
 
 Native GitHub options used here: Actions summaries for each check, artifacts for screenshots/logs, and a pinned issue for the durable three-state status. GitHub also offers workflow badges and Pages; a single latest-run badge would conflate historical control runs with the latest release verdict. Pages can be added later if a separate visual site is useful.
 
+End-to-end reporting validation: [unchanged discovery skipped Windows](https://github.com/gakera/zen-window-sync-canary/actions/runs/41710318029), [1.21.8b PASS was published](https://github.com/gakera/zen-window-sync-canary/actions/runs/41710323529), and [1.24b FAIL was published](https://github.com/gakera/zen-window-sync-canary/actions/runs/41710328475). Both result comments survived parallel execution and the latest-stable headline stayed FAIL. The pinned issue title also carries the current verdict. The result-publication step deliberately exits nonzero for FAIL/UNVERIFIED after saving the result; this keeps those tests from appearing green.
+
 ## Verified release comparison
 
 Both runs below used the same hardened test revision (ecfa7ab) and released Windows x64 binaries on GitHub-hosted Windows runners:

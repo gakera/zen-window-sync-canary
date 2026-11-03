@@ -3,7 +3,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from reporting import comment_body, dashboard, make_result, read_results, record, should_test
+from reporting import comment_body, dashboard, dashboard_title, make_result, read_results, record, should_test
 
 
 class ReportingTests(unittest.TestCase):
@@ -43,6 +43,11 @@ class ReportingTests(unittest.TestCase):
     def test_discovery_error_has_no_green_headline(self):
         body = dashboard(None, [self.result], "suite-current", "today", "Network failed")
         self.assertIn("UNVERIFIED — latest release lookup failed", body)
+
+    def test_pinned_title_exposes_latest_verdict_and_unknown_state(self):
+        self.assertIn("1.24b — FAIL", dashboard_title(self.release, [dict(self.result, classification="FAIL")], "suite-current"))
+        self.assertIn("UNVERIFIED", dashboard_title(self.release, [self.result], "suite-new"))
+        self.assertIn("UNVERIFIED", dashboard_title(None, [self.result], "suite-current"))
 
     def test_missing_incomplete_or_mismatched_report_is_unverified(self):
         reports = [{}, dict(self.report, p0_complete=False), dict(self.report, sync_scenario_complete=False), dict(self.report, release=dict(self.release, digest="changed"))]

@@ -89,7 +89,7 @@ jobs:
         with:
           name: windows-feasibility-${{ github.run_id }}
           path: evidence/
-      - name: Save authoritative release verdict to status history
+      - name: Publish result and enforce PASS / FAIL / UNVERIFIED
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SELECTED_RELEASE: ${{ needs.discover.outputs.release_json }}

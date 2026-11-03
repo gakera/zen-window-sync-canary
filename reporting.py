@@ -158,6 +158,14 @@ def dashboard(release, results, fingerprint, checked_at, error=None):
     return "\n".join(lines)
 
 
+def dashboard_title(release, results, fingerprint):
+    if release is None:
+        return "🟡 Zen release canary — UNVERIFIED"
+    current = matching(results, release, fingerprint)
+    verdict = current[-1]["classification"] if current else "UNVERIFIED"
+    return f"{ICONS[verdict]} Zen {release['tag']} — {verdict} · release canary"
+
+
 def summary(text):
     print(text)
     if os.getenv("GITHUB_STEP_SUMMARY"):
@@ -202,7 +210,7 @@ def refresh():
     except Exception as exception:
         release, error = None, str(exception)[:300]
     body = dashboard(release, results, suite_id(), now(), error)
-    api(f"/issues/{os.environ['STATUS_ISSUE']}", {"body": body}, "PATCH")
+    api(f"/issues/{os.environ['STATUS_ISSUE']}", {"body": body, "title": dashboard_title(release, results, suite_id())}, "PATCH")
     summary(body)
     return 2 if error else 0
 
