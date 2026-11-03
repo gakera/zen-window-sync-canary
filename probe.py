@@ -16,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import zipfile
+from sync_test import RegressionFailure, run_sync_test
 
 
 def request_json(url, payload=None, method=None):
@@ -61,13 +62,29 @@ def download(asset, target):
 
 
 class Fixture(http.server.BaseHTTPRequestHandler):
+    events = []
+
     def do_GET(self):
         body = (Path(__file__).parent / "fixture.html").read_bytes()
+        if self.path == "/distractor":
+            body = b'<!doctype html><title>Canary distractor</title><h1>Different tab selected</h1>'
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def do_POST(self):
+        if self.path != "/events":
+            self.send_error(404)
+            return
+        length = int(self.headers.get("Content-Length", "0"))
+        if not 0 < length <= 4096:
+            self.send_error(400)
+            return
+        self.events.append(json.loads(self.rfile.read(length)))
+        self.send_response(204)
+        self.end_headers()
 
     def log_message(self, *args):
         pass
@@ -118,7 +135,7 @@ def main():
     evidence.mkdir(exist_ok=True)
     report = {
         "classification": "UNVERIFIED",
-        "reason": "P0 does not yet exercise synchronized tab state",
+        "reason": "Required synchronized-state scenario has not completed",
         "p0_complete": False,
         "stage": "platform",
         "os": platform.platform(),
@@ -183,7 +200,7 @@ def main():
                 port = listener.getsockname()[1]
             stage("webdriver_session")
             with (evidence / "geckodriver.log").open("w") as log:
-                driver_process = subprocess.Popen([str(root / "geckodriver.exe"), "--port", str(port), "--log", "trace"], stdout=log, stderr=subprocess.STDOUT)
+                driver_process = subprocess.Popen([str(root / "geckodriver.exe"), "--port", str(port), "--log", "trace", "--allow-system-access"], stdout=log, stderr=subprocess.STDOUT)
                 base_url = f"http://127.0.0.1:{port}"
                 wait_ready(base_url + "/status", driver_process)
                 profile = root / "profile"
@@ -259,6 +276,14 @@ def main():
                 (evidence / "browser.png").write_bytes(base64.b64decode(command("/screenshot")))
                 report["p0_complete"] = True
                 stage("p0_complete")
+                run_sync_test(command, desktop, stage, report, evidence, browser_pid, report["native_windows_before"][0], server.server_port, Fixture.events)
+                report["classification"] = "PASS"
+                report["reason"] = "Focused synchronized-tab live-state scenario passed; broader update safety is not established"
+        except RegressionFailure as error:
+            report["classification"] = "FAIL"
+            report["reason"] = str(error)
+            print("Behavioral regression: " + str(error), flush=True)
+            desktop("desktop-regression-failure.png")
         except Exception:
             report["error"] = traceback.format_exc()
             print(report["error"], flush=True)
@@ -284,13 +309,13 @@ def main():
             if server:
                 server.shutdown()
             (evidence / "report.json").write_text(json.dumps(report, indent=2))
-            summary = f"## UNVERIFIED\n\nP0 completed: {report['p0_complete']}\n\nStage: {report['stage']}\n\n{report['reason']}\n"
+            summary = f"## {report['classification']}\n\nP0 completed: {report['p0_complete']}\n\nStage: {report['stage']}\n\n{report['reason']}\n"
             (evidence / "summary.md").write_text(summary)
             print(summary, flush=True)
             if os.getenv("GITHUB_STEP_SUMMARY"):
                 with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as output:
                     output.write(summary)
-    return 2
+    return {"PASS": 0, "FAIL": 1, "UNVERIFIED": 2}[report["classification"]]
 
 
 if __name__ == "__main__":

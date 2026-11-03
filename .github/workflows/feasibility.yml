@@ -1,4 +1,4 @@
-name: Windows release feasibility
+name: Windows released-browser sync canary
 on:
   workflow_dispatch:
     inputs:
@@ -8,9 +8,6 @@ on:
         required: true
 permissions:
   contents: read
-concurrency:
-  group: feasibility-${{ github.ref }}
-  cancel-in-progress: false
 jobs:
   probe:
     runs-on: windows-2025
@@ -22,7 +19,7 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
           python-version: '3.11'
-      - name: Probe released Windows binary
+      - name: Check released Windows browser and synchronized live state
         env:
           ZEN_RELEASE: ${{ inputs.release }}
           GITHUB_TOKEN: ${{ github.token }}

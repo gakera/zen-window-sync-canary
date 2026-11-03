@@ -1,6 +1,14 @@
 # Zen Windows sync canary — P0 draft
 
-Status: **UNVERIFIED**. Windows feasibility is pending. See the repository's Actions tab for current execution logs and evidence. The probe prints timestamped milestones and errors as they happen; screenshots are saved as artifacts after the run.
+Status: **UNVERIFIED** pending the first synchronized-state scenario run. P0 completed in [41703926147](https://github.com/gakera/zen-window-sync-canary/actions/runs/41703926147). See Actions for current logs and evidence. The probe prints timestamped milestones and errors; screenshots are saved as artifacts after the run.
+
+## Focused synchronized-tab scenario
+
+After P0, open a normal tab through native Ctrl+T and address-bar input. Read its shared Zen tab ID and inspect its counterpart in the other window using WebDriver browser-UI mode. Click the real sidebar tab through WebDriver's element-click endpoint; no script repairs or replaces Zen's synchronization logic. Browser-UI mode requires geckodriver's documented `--allow-system-access` flag, used only inside the disposable runner against the released binary. This is separate from in-tree Mochitest.
+
+Mutate the fixture in A with a real counter click, history button and wheel scroll. Select a normal distractor tab in A before selecting the same shared fixture tab in B. Assert visible content, document token, counter, history URL and scroll; click again in B and require a server-observed trusted event. Deselect in B and return to A, checking the updated live state again. Save tab inventories, selected IDs, state observations, page screenshots and full desktop screenshots. A blank New Tab in B must fail this test even if the sidebar label or remembered URL looks correct.
+
+PASS means this one required scenario completed; broader release safety and historical regression sensitivity remain unproven. FAIL means a behavioral mismatch after identifiable UI selection, including an absent mirrored tab after bounded polling. UNVERIFIED means required automation/setup/evidence did not complete. Expected failure on 1.24b is not overridden to green. Each manually dispatched run has its own runner VM and can execute concurrently.
 
 The user expects the synchronized-state regression to fail on 1.24b. Treat 1.24b as an expected failing candidate, pending reproduction. Keep normal regression semantics: a confirmed state-loss assertion is FAIL, not an expected-failure override that makes the run green. A WebDriver failure is UNVERIFIED and supplies no evidence about the sync regression.
 

@@ -2,6 +2,7 @@ import unittest
 import io
 from unittest.mock import patch
 from probe import release_asset, request_json
+from sync_test import state_differences
 
 
 class ReleaseSelectionTests(unittest.TestCase):
@@ -25,6 +26,25 @@ class ReleaseSelectionTests(unittest.TestCase):
         ]:
             with self.subTest(release=release), self.assertRaises(ValueError):
                 release_asset(release, "zen.installer.exe")
+
+
+class LiveStateTests(unittest.TestCase):
+    def setUp(self):
+        self.state = {"token": "document-a", "counter": 1, "url": "http://127.0.0.1:1234/sync-fixture?state=1", "scroll": 700, "visibility": "visible", "width": 900, "height": 600}
+
+    def test_preserved_state_passes(self):
+        self.assertEqual(state_differences(self.state, dict(self.state)), [])
+
+    def test_reloaded_document_fails_even_if_other_state_restored(self):
+        self.assertTrue(any("token" in difference for difference in state_differences(self.state, dict(self.state, token="document-b"))))
+
+    def test_blank_new_tab_fails(self):
+        self.assertTrue(state_differences(self.state, {"url": "about:blank"}))
+
+    def test_each_live_state_loss_is_detected(self):
+        for change in [{"counter": 0}, {"scroll": 0}, {"url": "http://127.0.0.1:1234/sync-fixture"}, {"visibility": "hidden"}, {"width": 0}]:
+            with self.subTest(change=change):
+                self.assertTrue(state_differences(self.state, dict(self.state, **change)))
 
 
 if __name__ == "__main__":

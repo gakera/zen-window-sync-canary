@@ -8,9 +8,9 @@
 const token = crypto.randomUUID();
 let counter = 0;
 let trustedClick = false;
-window.snapshot = () => ({token, counter, trustedClick, scroll: scrollY, url: location.href, visibility: document.visibilityState});
+window.snapshot = () => ({token, counter, trustedClick, scroll: scrollY, url: location.href, visibility: document.visibilityState, width: innerWidth, height: innerHeight});
 function render() { document.querySelector('#state').textContent = JSON.stringify(snapshot()); }
-document.querySelector('#increment').onclick = event => { counter++; trustedClick = event.isTrusted; render(); };
+document.querySelector('#increment').onclick = event => { counter++; trustedClick = event.isTrusted; render(); fetch('/events', {method: 'POST', body: JSON.stringify(snapshot())}); };
 document.querySelector('#history').onclick = () => { history.pushState({counter}, '', '?state=' + counter); render(); };
 addEventListener('scroll', render);
 addEventListener('visibilitychange', render);
