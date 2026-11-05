@@ -6,7 +6,7 @@ These are the original investigation notes, retained as historical context. Some
 
 **[Open the pinned release-status dashboard](https://github.com/gakera/zen-window-sync-canary/issues/1)** · [Run / retest a release](https://github.com/gakera/zen-window-sync-canary/actions/workflows/feasibility.yml)
 
-The dashboard headline tracks the latest published stable Zen release, independently of historical/manual test runs. Daily release discovery runs at **06:17 UTC** on Ubuntu; Windows runs only for a new release ID, asset ID/digest or runtime test-suite fingerprint. An unchanged FAIL remains a FAIL on the dashboard even if the lightweight daily workflow is green. No workflow badge is used as a release-safety signal.
+The dashboard headline tracks the latest published stable Zen release, independently of historical/manual test runs. Daily release discovery is scheduled for **00:00 UTC** on Ubuntu; Windows runs only for a new release ID, asset ID/digest or runtime test-suite fingerprint. An unchanged FAIL remains a FAIL on the dashboard even if the lightweight daily workflow is green. No workflow badge is used as a release-safety signal.
 
 Manual runs accept an exact release tag or `latest`. **Retest** defaults to true; turn it off to exercise the automatic discovery/deduplication path. UNVERIFIED identities get at most three automatic attempts, then require a manual forced retest. Results from setup failures or missing artifacts remain UNVERIFIED. Only main-branch runs can update the status issue.
 

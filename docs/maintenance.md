@@ -17,7 +17,7 @@ Browser-UI mode uses geckodriver's `--allow-system-access` flag only in the disp
 
 ## Scheduling and retesting
 
-The workflow checks the upstream stable release daily at 06:17 UTC. GitHub release events apply to the repository containing the workflow, so upstream releases are discovered through the release API.
+The workflow is scheduled to check the upstream stable release daily at 00:00 UTC. GitHub release events apply to the repository containing the workflow, so upstream releases are discovered through the release API.
 
 The test identity includes the release and asset IDs, asset digest and runtime-file fingerprint. Unchanged PASS/FAIL identities skip Windows. UNVERIFIED identities get at most three automatic attempts. Manual runs accept a stable tag or `latest`; the Retest input defaults to true and bypasses deduplication. Only main-branch runs update the dashboard.
 

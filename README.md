@@ -38,7 +38,7 @@ This is a focused regression signal, not a general security or update-safety cer
 
 ## Following releases
 
-New stable releases are checked daily at **06:17 UTC**. The dashboard distinguishes **PASS**, **FAIL**, and **UNVERIFIED** (automation or setup could not establish a result), with links to logs and screenshots. Subscribe to the dashboard issue for new test results, or use **Run workflow** to check a particular release manually.
+New stable releases are checked on a daily schedule targeting **00:00 UTC**. The dashboard distinguishes **PASS**, **FAIL**, and **UNVERIFIED** (automation or setup could not establish a result), with links to logs and screenshots. Subscribe to the dashboard issue for new test results, or use **Run workflow** to check a particular release manually.
 
 ## Further reading
 

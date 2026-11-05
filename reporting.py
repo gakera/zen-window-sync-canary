@@ -152,7 +152,7 @@ def dashboard(release, results, fingerprint, checked_at, error=None):
         lines.append(f"| {cell(result['release']['tag'])} | {ICONS[result['classification']]} **{result['classification']}** | `{result['suite_id'][:12]}` ({label}) | {result['tested_at']} | [Logs / screenshots]({run_url(result)}) |")
     lines.extend(["", "## Controls", "",
                   f"[Run or retest a release](https://github.com/{repository()}/actions/workflows/feasibility.yml) · [All runs](https://github.com/{repository()}/actions)", "",
-                  "Automatic lookup: daily at 06:17 UTC. Windows runs only for a new release/asset/test-suite identity. UNVERIFIED identities get at most three automatic attempts; use a manual forced retest after that. FAIL assertions are never retried within a test run.", "",
+                  "Automatic lookup: scheduled daily at 00:00 UTC. Windows runs only for a new release/asset/test-suite identity. UNVERIFIED identities get at most three automatic attempts; use a manual forced retest after that. FAIL assertions are never retried within a test run.", "",
                   "PASS = all required assertions ran. FAIL = behavioral mismatch. UNVERIFIED = setup, automation or evidence could not establish a verdict. A historical PASS never changes the latest-stable headline.", "",
                   "Subscribe to this issue for actual test-result comments. Unchanged daily checks update this summary without adding comments. Screenshots expire after 7 days; compact result artifacts after 90 days; result comments remain until removed."])
     return "\n".join(lines)
